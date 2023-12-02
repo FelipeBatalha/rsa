@@ -1,11 +1,15 @@
 import random
 import threading
 from queue import Queue
+import concurrent.futures
+
 
 def miller_rabin(n):
 
-    if n % 2 == 0:
-        return False
+    #eliminar fatores obvios
+    for i in range(2,10):
+        if n % i == 0:
+            return False
     
     r = 0
     d = n - 1
@@ -14,38 +18,38 @@ def miller_rabin(n):
         d //= 2
         r += 1
 
-    a = random.randint(1, n)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+
+        k = 64
+        for i in range(1, k):
+            a = random.randint(2, n -2)
+            future = executor.submit(check_primality, a, d, n, r)
+            futures.append(future)
+            
+        
+        results = [future.result() for future in concurrent.futures.as_completed(futures)]
+        return any(results)
+
+def check_primality(a, d, n, r):
     x = pow(a, d, n)
-
-    k = 100000000
-    for i in range(1, k):
-        a = random.randint(1, n)
-        #pritn(f"O a é {a}")
-        x = pow(a, d, n)
-        #pritn(f"O x é {x}")
-
-        if (x == 1 % n) or (x == -1 % n):
-            pass
-            #pritn("Pode ser primo")
-        else:
-            for j in range(1, r - 1):
-                x = pow(x, 2, n)
-                if x == 1 % n:
-                    #pritn("É composto")
-                    return False    #cuz its composite
-                elif x == -1 % n:
-                    pass
-                    #pritn("Pode ser primo")
-    return True
+    if x == 1 or x == n - 1:
+        return True
+    
+    for j in range(1, r):
+        x = pow(x, 2, n)
+        if x == 1:
+            return False
+        if x == n - 1:
+            return True
+    
+    return False  # Number is composite
 
 def get_prime_number(queue):
     is_prime = False
     while is_prime is False:
-        if is_prime:
-            break
-        else:
-            number = random.getrandbits(128)
-            is_prime = miller_rabin(number)
+        number = random.getrandbits(512)
+        is_prime = miller_rabin(number)
     queue.put(number)
 
 def main():
@@ -69,6 +73,14 @@ def main():
     print(f"O q é {q}")
 
     n = p * q
-    print(n)
+    print(f"O n é {n}")
+
+    phi = (p - 1) * (q - 1)
+    print(f"o phi é {phi}")
+    e = 65537
+
+    d = pow(e, -1, phi)
+    #print((e * d) % phi == 1)
+    print(f"O d é {d}")
 
 main()

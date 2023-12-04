@@ -3,6 +3,18 @@ import threading
 from queue import Queue
 import concurrent.futures
 import base64
+import hashlib
+
+def sha3_256(message):
+    if isinstance(message, str):  # Check if the input is a string
+        message = message.encode()  # Encode the string to bytes if it's a string
+        
+    if isinstance(message, bytes):  # Check if the input is bytes
+        hashed = hashlib.sha3_256(message).digest()  # Get the hash of the bytes
+    else:
+        hashed = hashlib.sha3_256(int.to_bytes(message, (message.bit_length() + 7) // 8, 'big')).digest()
+
+    return int.from_bytes(hashed, 'big')  # Convert the hashed bytes to an integer
 
 
 def miller_rabin(n):
@@ -70,6 +82,43 @@ def number_to_text(num):
     text = num_bytes.decode('utf-8')
     return text
 
+def oaep_encrypt(message, public_key):
+    e, n = public_key
+    k = len(bin(n)[2:]) // 8 - 2 * 32
+    message = int.from_bytes(message.encode(), 'big')
+
+    hashed_message = sha3_256(message)
+    padded = (message << (k * 8)) | hashed_message
+
+    return cipher(padded, n, e)
+
+def oaep_decrypt(ciphertext, private_key):
+    d, n = private_key
+
+    decrypted = decipher(ciphertext, n, d)
+
+    # Extracting the message and hash
+    message = decrypted >> 256
+    hash_check = decrypted & ((1 << 256) - 1)
+
+    # Convert message to bytes
+    message_bytes = message.to_bytes((message.bit_length() + 7) // 8, 'big')
+
+    # Extract the hash (last 32 bytes)
+    extracted_hash = message_bytes[-32:]
+
+    # Extract the message (excluding the hash)
+    extracted_message = message_bytes[:-32]
+
+    # Recalculate the hash of the extracted message
+    recalculated_hash = hashlib.sha3_256(extracted_message).digest()
+
+    print("Hash Check:", hash_check)
+    print("Extracted Hash:", int.from_bytes(extracted_hash, 'big'))
+    print("Recalculated Hash:", int.from_bytes(recalculated_hash, 'big'))
+
+    return extracted_message.decode()
+
 
 def main():
 
@@ -88,30 +137,35 @@ def main():
     p = result_queue_p.get()
     q = result_queue_q.get()
 
-    print(f"O p é {p}")
-    print(f"O q é {q}")
+    #print(f"O p é {p}")
+    #print(f"O q é {q}")
 
     n = p * q
-    print(f"O n é {n}")
+    #print(f"O n é {n}")
 
     phi = (p - 1) * (q - 1)
-    print(f"o phi é {phi}")
+    #print(f"o phi é {phi}")
     e = 65537
 
     d = pow(e, -1, phi)
-    #print((e * d) % phi == 1)
-    print(f"O d é {hex(d)}")
+    ##print((e * d) % phi == 1)
+    #print(f"O d é {hex(d)}")
 
     msg = 'pqp man, que situação difícil'
-    msg = text_to_number(msg)
+    public_key = (e, n)
+    private_key = (d, n)
+
+    encrypted_message = oaep_encrypt(msg, public_key)
+    decrypted_message = oaep_decrypt(encrypted_message, private_key)
+
+    print(encrypted_message)
+    print(decrypted_message)
+
+    '''msg = text_to_number(msg)
     ciphered_msg = cipher(msg, n, e)
-    print(ciphered_msg)
+    #print(ciphered_msg)
     deciphered_msg = decipher(ciphered_msg, n, d)
-    print(number_to_text(deciphered_msg))
+    #print(number_to_text(deciphered_msg))'''
 
 
-
-    '''public_key_str = f"{0x9a11485bccb9569410a848fb1afdf2a81b17c1fa9f9eb546fd1deb873b49b693a4edf20eb8362c085cd5b28ba109dbad2bd257a013f57f745402e245b0cc2d553c7b2b8dbba57ebda7f84cfb32b7d9c254f03dbd0188e4b8e40c47b64c1bd2572834b936ffc3da9953657ef8bee80c49c2c12933c8a34804a00eb4c81248e01f}"
-    public_key_b64 = base64.b64encode(public_key_str.encode())
-    print(public_key_b64)'''
 main()

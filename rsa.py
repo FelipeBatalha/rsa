@@ -68,11 +68,11 @@ def text_to_number(text):
     return num
 
 def number_to_text(num):
-    #num_bytes = num.to_bytes((num.bit_length() + 7) // 8, byteorder='big')
-    text = num.decode('utf-8')
+    num_bytes = num.to_bytes((num.bit_length() + 7) // 8, byteorder='big')
+    text = num_bytes.decode('utf-8')
     return text
 
-if __name__ == "__main__":
+def generate_keys():
 
     result_queue_p = Queue()
     result_queue_q = Queue()
@@ -97,12 +97,22 @@ if __name__ == "__main__":
 
     d = pow(e, -1, phi)
 
-    msg = 'apenas uma mensagem de teste'
     public_key = (e, n)
     private_key = (d, n)
+    return public_key, private_key
+
+if __name__ == "__main__":
+
+    public_key, private_key = generate_keys()
+
+    msg = 'apenas uma mensagem de teste'
+
+    msg = text_to_number(msg)
 
     encrypted_message = rsa_cipher(msg, public_key)
     decrypted_message = rsa_decipher(encrypted_message, private_key)
 
-    print(encrypted_message)
-    #print(decrypted_message)
+    decrypted_message = number_to_text(decrypted_message)
+
+    print("Mensagem cifrada: \n", base64.b64encode(encrypted_message.to_bytes((encrypted_message.bit_length() + 7) // 8, 'big')))
+    print("Mensagem decifrada: \n", decrypted_message)

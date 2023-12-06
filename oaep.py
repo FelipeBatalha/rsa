@@ -1,7 +1,4 @@
 import os
-import threading
-from queue import Queue
-import base64
 import hashlib
 from rsa import *
 
@@ -69,7 +66,7 @@ def oaep_encrypt(message, public_key):
     encoded_message = b'\x00' + masked_seed + masked_data_block
 
     # RSA encryption
-    encrypted = pow(int.from_bytes(encoded_message, 'big'), e, n)
+    encrypted = rsa_cipher(int.from_bytes(encoded_message, 'big'), public_key)
     encrypted = encrypted.to_bytes((encrypted.bit_length() + 7) // 8, 'big')
 
     return encrypted
@@ -85,7 +82,7 @@ def oaep_decrypt(ciphertext, private_key):
     data_block_length = k - hash_length - 1
 
     ciphertext = int.from_bytes(ciphertext, 'big')
-    decrypted = pow(ciphertext, d, n)
+    decrypted = rsa_decipher(ciphertext, private_key)
     
     encoded_message = decrypted.to_bytes(k, 'big')
     
@@ -113,38 +110,13 @@ def oaep_decrypt(ciphertext, private_key):
     return original_message.decode('utf-8')
 
 
-def main():
+if __name__ == "__main__":
 
-    result_queue_p = Queue()
-    result_queue_q = Queue()
-
-    p_thread = threading.Thread(target=get_prime_number,args=(result_queue_p,))
-    q_thread = threading.Thread(target=get_prime_number, args=(result_queue_q,))
-
-    p_thread.start()
-    q_thread.start()
-
-    p_thread.join()
-    q_thread.join()
-
-    p = result_queue_p.get()
-    q = result_queue_q.get()
-
-    n = p * q
-
-    phi = (p - 1) * (q - 1)
-
-    e = 65537
-
-    d = pow(e, -1, phi)
+    public_key, private_key = generate_keys()
 
     msg = 'apenas uma mensagem de teste'
-    public_key = (e, n)
-    private_key = (d, n)
 
     encrypted_message = oaep_encrypt(msg, public_key)
-    print("Mensagem criptografada: \n", encrypted_message)
+    print("Mensagem criptografada: \n", base64.b64encode(encrypted_message))
     decrypted_message = oaep_decrypt(encrypted_message, private_key)
     print("Mensagem decifrada: \n", decrypted_message)
-
-main()

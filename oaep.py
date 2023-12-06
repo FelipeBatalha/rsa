@@ -31,6 +31,9 @@ def oaep_encrypt(message, public_key, private_key):
     if size_limit:
         raise ValueError("Message too long for OAEP padding")
     
+    padding_length = k - size_limit
+    padding = b'\x00' * padding_length + b'\x01'
+    
     #random nonce
     seed = os.urandom(hash_length)
 
@@ -40,18 +43,12 @@ def oaep_encrypt(message, public_key, private_key):
     masked_seed = masked_seed.to_bytes(hash_length, 'big')
     
     #OAEP padding
-    padding_length = k - size_limit
-    padded_message = (
-        b'\x00' * padding_length +
-        b'\x01' +
-        masked_seed +
-        hash(masked_seed + message_bytes) +
-        message_bytes
-    )
+    
+    padded_message = padding + masked_seed + hash(masked_seed + message_bytes) + message_bytes
 
     # RSA encryption
     encrypted = pow(int.from_bytes(padded_message, 'big'), e, n)
-    number_to_text(oaep_decrypt(encrypted, private_key))
+    oaep_decrypt(encrypted, private_key)
     return encrypted
 
 
@@ -77,7 +74,7 @@ def oaep_decrypt(ciphertext, private_key):
     seed = int.from_bytes(masked_seed, 'big') ^ int.from_bytes(hash(masked_message), 'big')
     seed = seed.to_bytes(hash_length, 'big')
     # Unmask the padded message
-    padded_message = int.from_bytes(masked_message, 'big') ^ int.from_bytes(hash(seed.to_bytes(k - hash_length, 'big')), 'big')
+    padded_message = int.from_bytes(masked_message, 'big') ^ int.from_bytes(hash(seed), 'big')
 
     # remove padding and get original message
     original_message = padded_message.to_bytes(k - hash_length, 'big')
@@ -118,7 +115,7 @@ def main():
     private_key = (d, n)
 
     encrypted_message = oaep_encrypt(msg, public_key, private_key)
-    decrypted_message = oaep_decrypt(encrypted_message, private_key)
+    #decrypted_message = oaep_decrypt(encrypted_message, private_key)
 
     print(encrypted_message)
     #print(decrypted_message)

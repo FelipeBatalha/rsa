@@ -53,11 +53,11 @@ def get_prime_number(queue):
         is_prime = miller_rabin(number)
     queue.put(number)
 
-def decipher(cipher, private_key):
+def rsa_decipher(cipher, private_key):
     d, n = private_key
     return pow(cipher, d, n)
 
-def cipher(msg, public_key):
+def rsa_cipher(msg, public_key):
     e, n = public_key
     return pow(msg, e, n)
 
@@ -97,12 +97,12 @@ if __name__ == "__main__":
 
     d = pow(e, -1, phi)
 
-    msg = 'pqp man, que situação difícil'
+    msg = 'apenas uma mensagem de teste'
     public_key = (e, n)
     private_key = (d, n)
 
-    encrypted_message = cipher(msg, public_key)
-    decrypted_message = decipher(encrypted_message, private_key)
+    encrypted_message = rsa_cipher(msg, public_key)
+    decrypted_message = rsa_decipher(encrypted_message, private_key)
 
     print(encrypted_message)
     #print(decrypted_message)

@@ -33,7 +33,7 @@ def hash(message):
     return hashed
 
 
-def oaep_encrypt(message, public_key, private_key):
+def oaep_encrypt(message, public_key):
     e, n = public_key
 
     k = (n.bit_length() + 7) // 8
@@ -60,18 +60,18 @@ def oaep_encrypt(message, public_key, private_key):
     masked_data_block = masked_data_block.to_bytes(data_block_length, 'big')
 
     #mask for the message
-    seed_mask = mgf1(masked_data_block, hash_length) #pode precisar ver se é bytes e tal
+    seed_mask = mgf1(masked_data_block, hash_length)
     masked_seed = int.from_bytes(seed, 'big') ^ int.from_bytes(seed_mask, 'big')
     masked_seed = masked_seed.to_bytes(hash_length, 'big')
     
     #OAEP padding
     
-    message_to_encrypt = b'\x00' + masked_seed + masked_data_block
+    encoded_message = b'\x00' + masked_seed + masked_data_block
 
     # RSA encryption
-    encrypted = pow(int.from_bytes(message_to_encrypt, 'big'), e, n)
-    print(encrypted)
-    oaep_decrypt(encrypted, private_key)
+    encrypted = pow(int.from_bytes(encoded_message, 'big'), e, n)
+    encrypted = encrypted.to_bytes((encrypted.bit_length() + 7) // 8, 'big')
+
     return encrypted
 
 
@@ -82,30 +82,35 @@ def oaep_decrypt(ciphertext, private_key):
 
     k = (n.bit_length() + 7) // 8  # Length of the modulus in bytes
 
+    data_block_length = k - hash_length - 1
+
+    ciphertext = int.from_bytes(ciphertext, 'big')
     decrypted = pow(ciphertext, d, n)
     
-    padded_message = decrypted.to_bytes(k, 'big')
+    encoded_message = decrypted.to_bytes(k, 'big')
+    
+    encoded_message = encoded_message.split(b'\x00', 1)[1]
 
-    # extract masked padded message
-    masked_padded_message = padded_message[hash_length:]
-
-    # extract masked seed from masked padded message
-    masked_seed = masked_padded_message[:hash_length]
-    masked_message = masked_padded_message[hash_length:]
+    masked_seed = encoded_message[:hash_length]
+    masked_data_block = encoded_message[hash_length:]
 
     # unmask the seed
-    seed = int.from_bytes(masked_seed, 'big') ^ int.from_bytes(hash(masked_message), 'big')
-    seed = seed.to_bytes(hash_length, 'big')
-    # Unmask the padded message
-    padded_message = int.from_bytes(masked_message, 'big') ^ int.from_bytes(hash(seed), 'big')
 
-    # remove padding and get original message
-    original_message = padded_message.to_bytes(k - hash_length, 'big')
-    idx = original_message.find(b'\x01')
+    seed_mask = mgf1(masked_data_block, hash_length)
+    seed =  int.from_bytes(masked_seed, 'big') ^ int.from_bytes(seed_mask, 'big')
+    seed = seed.to_bytes(hash_length, 'big')
+
+    data_block_mask = mgf1(seed, data_block_length)
+    data_block = int.from_bytes(masked_data_block, 'big') ^ int.from_bytes(data_block_mask, 'big')
+    data_block = data_block.to_bytes(data_block_length, 'big')
+
+    idx = data_block.find(b'\x01')
     if idx == -1:
         raise ValueError("Invalid padding")
+    else:
+        original_message = data_block.split(b'\x01',1)[1]
     
-    return original_message[idx + 1:].decode('utf-8')
+    return original_message.decode('utf-8')
 
 
 def main():
@@ -133,15 +138,13 @@ def main():
 
     d = pow(e, -1, phi)
 
-    msg = 'pqp man, que situação difícil'
+    msg = 'apenas uma mensagem de teste'
     public_key = (e, n)
     private_key = (d, n)
 
-    encrypted_message = oaep_encrypt(msg, public_key, private_key)
-    #decrypted_message = oaep_decrypt(encrypted_message, private_key)
-
-    print(encrypted_message)
-    #print(decrypted_message)
-
+    encrypted_message = oaep_encrypt(msg, public_key)
+    print("Mensagem criptografada: \n", encrypted_message)
+    decrypted_message = oaep_decrypt(encrypted_message, private_key)
+    print("Mensagem decifrada: \n", decrypted_message)
 
 main()

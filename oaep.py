@@ -34,8 +34,10 @@ def oaep_encrypt(message, public_key):
     e, n = public_key
 
     k = (n.bit_length() + 7) // 8
-
-    message_bytes = message.encode('utf-8')
+    if not isinstance(message, bytes):
+        message_bytes = message.encode('utf-8')
+    else:
+        message_bytes = message
 
     hash_length = hashlib.sha256().digest_size 
 

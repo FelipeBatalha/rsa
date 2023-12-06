@@ -23,19 +23,19 @@ def get_key(key_file):
     with open(key_file, 'r') as public_file:
         encoded_public_key = public_file.read()
 
-    decoded_key = json.loads(base64.b64decode(key_file.encode('utf-8')).decode('utf-8'))
+        decoded_key = json.loads(base64.b64decode(encoded_public_key.encode('utf-8')).decode('utf-8'))
 
     return tuple(decoded_key)
 
 if __name__ == "__main__":
 
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4:
         print("Uso: \nPara cifrar: python3 main.py cifrar arquivo_de_entrada nome_arquivo_cifrado \
             Para decifrar: python3 main.py decifrar arquivo_cifrado arquivo_de_saida")
         sys.exit(1)
     choice = sys.argv[1]
     input_file = sys.argv[2]
-    output_file = sys.argv[2]
+    output_file = sys.argv[3]
 
     while True:
 
@@ -48,15 +48,17 @@ if __name__ == "__main__":
             with open(input_file, 'rb') as file_in, open(output_file, 'wb') as file_out:
                 data = file_in.read()
                 encrypted_file = oaep_encrypt(data, public_key)
-                file_out.write(oaep_encrypt)
+                file_out.write(encrypted_file)
 
-            print("Concluído")
+            print("Arquivo cifrado")
         elif choice == "decifrar":
+            print("Decifrando considerando a chave 'private_key' no diretório...")
             private_key = get_key('private_key')
-            with open(input_file, 'rb') as file_in, open(output_file, 'wb') as file_out:
+            with open(input_file, 'rb') as file_in, open(output_file, 'w') as file_out:
                 data = file_in.read()
                 decrypted_file = oaep_decrypt(data, private_key)
                 file_out.write(decrypted_file)
+            print("Arquivo decifrado")
         else:
             print("Escolha inválida. Digite cifrar ou decifrar, mais o nome dos arquivos de entrada e saida")
             break

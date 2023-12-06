@@ -49,7 +49,7 @@ def check_primality(a, d, n, r):
 def get_prime_number(queue):
     is_prime = False
     while is_prime is False:
-        number = random.getrandbits(512)
+        number = random.getrandbits(1024)
         is_prime = miller_rabin(number)
     queue.put(number)
 

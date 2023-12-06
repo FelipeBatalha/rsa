@@ -35,25 +35,30 @@ if __name__ == "__main__":
         sys.exit(1)
     choice = sys.argv[1]
     input_file = sys.argv[2]
+    output_file = sys.argv[2]
 
     while True:
 
         msg = 'apenas uma mensagem de teste'
 
         if choice == "cifrar":
+            print("Gerando novas chaves..")
             generate_key_files()
             public_key = get_key('public_key.pub')
-            oaep_encrypt(msg, public_key)
+            with open(input_file, 'rb') as file_in, open(output_file, 'wb') as file_out:
+                data = file_in.read()
+                encrypted_file = oaep_encrypt(data, public_key)
+                file_out.write(oaep_encrypt)
+
+            print("Concluído")
         elif choice == "decifrar":
             private_key = get_key('private_key')
-            oaep_decrypt(encrypted_message, private_key)
+            with open(input_file, 'rb') as file_in, open(output_file, 'wb') as file_out:
+                data = file_in.read()
+                decrypted_file = oaep_decrypt(data, private_key)
+                file_out.write(decrypted_file)
         else:
             print("Escolha inválida. Digite cifrar ou decifrar, mais o nome dos arquivos de entrada e saida")
             break
         print("Operação concluída.")
         break
-
-    encrypted_message = oaep_encrypt(msg, public_key)
-    print("Mensagem criptografada: \n", base64.b64encode(encrypted_message))
-    decrypted_message = oaep_decrypt(encrypted_message, private_key)
-    print("Mensagem decifrada: \n", decrypted_message)
